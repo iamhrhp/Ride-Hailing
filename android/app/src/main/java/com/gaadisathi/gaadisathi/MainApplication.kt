@@ -1,37 +1,44 @@
-package com.gaadisathi.gaadisathi
+package com.gaadisathi
 
 import android.app.Application
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
-import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactNativeHost
-import com.facebook.react.ReactPackage
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.oblador.vectoricons.VectorIconsPackage
 
 class MainApplication : Application(), ReactApplication {
 
-  override val reactNativeHost: ReactNativeHost =
-      object : DefaultReactNativeHost(this) {
-        override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages.apply {
-              // Packages that cannot be autolinked yet can be added manually here, for example:
-              // add(MyReactNativePackage())
-              add(VectorIconsPackage())
-            }
+  private val _reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
+    override fun getPackages(): List<com.facebook.react.ReactPackage> =
+        PackageList(this@MainApplication).packages
 
-        override fun getJSMainModuleName(): String = "index"
+    override val isNewArchEnabled: Boolean
+      get() = com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 
-        override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
+    override fun getUseDeveloperSupport(): Boolean =
+        com.facebook.react.BuildConfig.DEBUG
+  }
 
-        override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
-        override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
-      }
+  override val reactNativeHost: ReactNativeHost
+    get() = _reactNativeHost
 
-  override val reactHost: ReactHost
-    get() = getDefaultReactHost(applicationContext, reactNativeHost)
+  override val reactHost: ReactHost by lazy {
+    getDefaultReactHost(
+      context = applicationContext,
+      packageList = PackageList(this).packages,
+      jsMainModulePath = "index",
+      jsBundleAssetPath = "index",
+      jsBundleFilePath = null,
+      isHermesEnabled = true,
+      useDevSupport = com.facebook.react.BuildConfig.DEBUG,
+      cxxReactPackageProviders = emptyList(),
+      exceptionHandler = { throw it },
+      bindingsInstaller = null
+    )
+  }
 
   override fun onCreate() {
     super.onCreate()
