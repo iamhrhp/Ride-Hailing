@@ -1,4 +1,4 @@
-package com.gaadisathi
+package com.gaadisathi.gaadisathi
 
 import android.app.Application
 import com.facebook.react.PackageList
