@@ -6,7 +6,11 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "node_modules/.bin/metro start --reset-cache",
+    "start:metro": "node_modules/.bin/metro start --reset-cache",
+    "start:direct": "node_modules/.bin/metro start --reset-cache",
+    "kill:metro": "lsof -ti:8081 | xargs kill -9",
+    "clear:cache": "rm -rf node_modules/.cache && watchman watch-del-all",
     "test": "jest"
   },
   "dependencies": {
