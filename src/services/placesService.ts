@@ -53,16 +53,24 @@ class PlacesService {
    * Search for places using Google Places Autocomplete API
    * Searches for ALL place types: establishments, shops, homes, street addresses, etc.
    * Just like Rapido and Ola apps
+   * @param input - The search query text
+   * @param location - Optional current location to bias search results (latitude, longitude)
    */
-  async searchPlaces(input: string): Promise<PlaceResult[]> {
+  async searchPlaces(input: string, location?: { latitude: number; longitude: number }): Promise<PlaceResult[]> {
     try {
       if (!input || input.length < 2) {
         return [];
       }
 
       const encodedInput = encodeURIComponent(input);
-      // Remove 'types' restriction to allow all place types (establishments, shops, homes, etc.)
-      const url = `${this.baseUrl}/place/autocomplete/json?input=${encodedInput}&components=country:in&key=${this.apiKey}`;
+      
+      // Build URL with location bias if available
+      let url = `${this.baseUrl}/place/autocomplete/json?input=${encodedInput}&components=country:in&key=${this.apiKey}`;
+      
+      // Add location bias to prioritize results near the user's current location
+      if (location) {
+        url += `&location=${location.latitude},${location.longitude}&radius=50000`;
+      }
 
       const response = await fetch(url);
       const data: AutocompleteResponse = await response.json();
@@ -74,26 +82,31 @@ class PlacesService {
             const details = await this.getPlaceDetails(prediction.place_id);
             
             // Log for debugging
-            if (!details) {
-              console.warn(`No details found for place_id: ${prediction.place_id}`);
+            if (!details || !details.geometry) {
+              console.warn(`No details found for place_id: ${prediction.place_id}, name: ${prediction.structured_formatting.main_text}`);
+              // Return null to filter out results without valid coordinates
+              return null;
             }
+            
+            console.log(`Place details for ${prediction.structured_formatting.main_text}:`, {
+              lat: details.geometry.location.lat,
+              lng: details.geometry.location.lng,
+            });
             
             return {
               place_id: prediction.place_id,
               description: prediction.description,
               structured_formatting: prediction.structured_formatting,
-              geometry: details?.geometry || {
-                location: {
-                  lat: 19.0760, // Fallback to Mumbai coordinates
-                  lng: 72.8777,
-                },
-              },
+              geometry: details.geometry,
             };
           })
         );
 
-        console.log('Places search results:', results);
-        return results;
+        // Filter out any null results (places where details fetch failed)
+        const validResults = results.filter((result): result is PlaceResult => result !== null);
+        
+        console.log(`Places search results: ${validResults.length} valid out of ${results.length} total`);
+        return validResults;
       }
 
       return [];

@@ -141,21 +141,63 @@ const HomeScreen: React.FC = () => {
 
   const calculateRoute = async (origin: Location, dest: Location) => {
     try {
+      console.log('🗺️ Creating route from:', origin, 'to:', dest);
+      
+      // Validate coordinates
+      if (!origin || !dest || 
+          !origin.latitude || !origin.longitude || 
+          !dest.latitude || !dest.longitude ||
+          isNaN(origin.latitude) || isNaN(origin.longitude) ||
+          isNaN(dest.latitude) || isNaN(dest.longitude)) {
+        console.error('❌ Invalid coordinates for route calculation');
+        return;
+      }
+      
       // For now, create a simple straight line route
       // In production, use Google Directions API
-      const intermediatePoints = 10;
+      const intermediatePoints = 50; // More points for smoother line
       const latStep = (dest.latitude - origin.latitude) / intermediatePoints;
       const lngStep = (dest.longitude - origin.longitude) / intermediatePoints;
       
       const routeCoords = [];
-      for (let i = 0; i <= intermediatePoints; i++) {
-        routeCoords.push({
-          latitude: origin.latitude + latStep * i,
-          longitude: origin.longitude + lngStep * i,
-        });
+      
+      // Always include origin point
+      routeCoords.push({
+        latitude: origin.latitude,
+        longitude: origin.longitude,
+      });
+      
+      // Add intermediate points
+      for (let i = 1; i < intermediatePoints; i++) {
+        const lat = origin.latitude + latStep * i;
+        const lng = origin.longitude + lngStep * i;
+        
+        // Validate each coordinate
+        if (!isNaN(lat) && !isNaN(lng)) {
+          routeCoords.push({
+            latitude: lat,
+            longitude: lng,
+          });
+        }
       }
       
-      setRouteCoordinates(routeCoords);
+      // Always include destination point
+      routeCoords.push({
+        latitude: dest.latitude,
+        longitude: dest.longitude,
+      });
+      
+      console.log('✅ Route calculated with', routeCoords.length, 'points');
+      console.log('First point:', routeCoords[0]);
+      console.log('Last point:', routeCoords[routeCoords.length - 1]);
+      
+      if (routeCoords.length >= 2) {
+        setRouteCoordinates(routeCoords);
+        console.log('✅ Route coordinates set successfully');
+      } else {
+        console.error('❌ Not enough route coordinates generated');
+        setRouteCoordinates([]);
+      }
       
       // Update region to fit both markers
       const midLat = (origin.latitude + dest.latitude) / 2;
@@ -181,14 +223,23 @@ const HomeScreen: React.FC = () => {
   // Calculate route when both locations are selected
   useEffect(() => {
     if (selectedLocation && destination) {
+      console.log('📍 Calculating route from pickup to destination');
+      console.log('Pickup:', selectedLocation);
+      console.log('Destination:', destination);
       calculateRoute(selectedLocation, destination);
-      // Show search rider modal
-      setShowSearchRiderModal(true);
     } else {
+      console.log('📍 Route cleared - missing pickup or destination');
       setRouteCoordinates([]);
       setShowSearchRiderModal(false);
     }
   }, [selectedLocation, destination]);
+
+  // Debug: Log route coordinates when they change
+  useEffect(() => {
+    if (routeCoordinates.length > 0) {
+      console.log('🛣️ Route coordinates updated:', routeCoordinates.length, 'points');
+    }
+  }, [routeCoordinates]);
 
   const setPickupToCurrentLocation = async () => {
     if (currentLocation) {
@@ -255,8 +306,13 @@ const HomeScreen: React.FC = () => {
       setIsSearchingLocation(true);
       
       try {
-        // Search using Google Places API
-        const results = await placesService.searchPlaces(text);
+        // Search using Google Places API with location bias
+        // Use current location or fallback to region center for better results
+        const locationBias = currentLocation && currentLocation.latitude !== 0 
+          ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude }
+          : { latitude: region.latitude, longitude: region.longitude };
+        
+        const results = await placesService.searchPlaces(text, locationBias);
         
         // Transform results to match our format
         const transformedResults = results.map((result, index) => {
@@ -267,8 +323,15 @@ const HomeScreen: React.FC = () => {
           
           console.log(`Result ${index}:`, {
             name: result.structured_formatting.main_text,
+            address: result.description,
             coords: coords,
+            place_id: result.place_id,
           });
+          
+          // Validate coordinates are not fallback values
+          if (coords.latitude === 19.0760 && coords.longitude === 72.8777) {
+            console.warn(`Warning: Result ${index} may have failed to get place details, using fallback coordinates`);
+          }
           
           return {
             id: result.place_id || `result-${index}`,
@@ -294,6 +357,12 @@ const HomeScreen: React.FC = () => {
   const handleSelectLocation = async (result: any) => {
     console.log('Handling location selection:', result);
     
+    // Validate coordinates exist
+    if (!result.location || !result.location.latitude || !result.location.longitude) {
+      console.error('Invalid location data in result:', result);
+      return;
+    }
+    
     const location: Location = {
       latitude: result.location.latitude,
       longitude: result.location.longitude,
@@ -301,25 +370,75 @@ const HomeScreen: React.FC = () => {
     };
 
     console.log('Setting location to:', location);
+    console.log('Location coordinates:', { lat: location.latitude, lng: location.longitude });
 
     if (activeInput === 'pickup') {
       setSelectedLocation(location);
       setPickupText(result.name || result.address);
+      
+      // If destination is already set, recalculate route
+      if (destination) {
+        // Route will be recalculated by useEffect
+        // Update region to fit both locations
+        const midLat = (location.latitude + destination.latitude) / 2;
+        const midLng = (location.longitude + destination.longitude) / 2;
+        setRegion({
+          latitude: midLat,
+          longitude: midLng,
+          latitudeDelta: Math.max(
+            Math.abs(location.latitude - destination.latitude) * 1.5,
+            0.05
+          ),
+          longitudeDelta: Math.max(
+            Math.abs(location.longitude - destination.longitude) * 1.5,
+            0.05
+          ),
+        });
+      } else {
+        // Update map region to center on the selected location
+        const newRegion = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.01, // Zoom in closer for better view
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+      }
     } else {
       setDestination(location);
       setDestinationText(result.name || result.address);
+      
+      // If pickup location is already set, update region to fit both locations
+      if (selectedLocation) {
+        // Route will be recalculated by useEffect
+        // Update region to fit both locations
+        const midLat = (selectedLocation.latitude + location.latitude) / 2;
+        const midLng = (selectedLocation.longitude + location.longitude) / 2;
+        setRegion({
+          latitude: midLat,
+          longitude: midLng,
+          latitudeDelta: Math.max(
+            Math.abs(selectedLocation.latitude - location.latitude) * 1.5,
+            0.05
+          ),
+          longitudeDelta: Math.max(
+            Math.abs(selectedLocation.longitude - location.longitude) * 1.5,
+            0.05
+          ),
+        });
+      } else {
+        // Update map region to center on the selected location
+        const newRegion = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.01, // Zoom in closer for better view
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+      }
     }
-
-    // Update map region to center on the selected location
-    const newRegion = {
-      latitude: location.latitude,
-      longitude: location.longitude,
-      latitudeDelta: 0.01, // Zoom in closer for better view
-      longitudeDelta: 0.01,
-    };
     
-    console.log('Updating map region to:', newRegion);
-    setRegion(newRegion);
+    console.log('Updating map region to fit route');
 
     setSearchResults([]);
     setActiveInput(null);
@@ -397,11 +516,16 @@ const HomeScreen: React.FC = () => {
         )}
 
         {/* Route Polyline */}
-        {routeCoordinates && routeCoordinates.length > 0 && (
+        {routeCoordinates && routeCoordinates.length >= 2 && (
           <Polyline
+            key={`route-${routeCoordinates.length}`}
             coordinates={routeCoordinates}
-            strokeWidth={4}
+            strokeWidth={5}
             strokeColor="#FF6B35"
+            lineCap="round"
+            lineJoin="round"
+            zIndex={1}
+            geodesic={false}
           />
         )}
 
@@ -526,12 +650,20 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.searchingText}>Searching...</Text>
           </View>
         )}
+
+        {/* Continue Ride Button - Show when both locations are selected */}
+        {selectedLocation && destination && searchResults.length === 0 && !isSearchingLocation && (
+          <TouchableOpacity
+            style={styles.continueRideButton}
+            onPress={() => setShowSearchRiderModal(true)}
+          >
+            <Icon name="arrow-right" size={20} color="#FFFFFF" />
+            <Text style={styles.continueRideButtonText}>Continue Ride</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Bottom Location Pin */}
-      <View style={styles.bottomLocationPin}>
-        <Icon name="map-marker" size={32} color="#FF6B35" />
-      </View>
+     
 
       {/* Ride Type Selection Modal */}
       <Modal
@@ -941,6 +1073,27 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#666666',
+  },
+  continueRideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  continueRideButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   searchResultItem: {
     flexDirection: 'row',
