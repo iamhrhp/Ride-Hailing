@@ -11,7 +11,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ride } from '../types';
 import { formatPrice, formatDistance, formatTimestamp, getStatusColor, getStatusText, formatDuration } from '../utils/general';
 
-const RidesScreen: React.FC = () => {
+const UserRidesScreen: React.FC = () => {
   // Mock data for rides
   const mockRides: Ride[] = [
     {
@@ -300,4 +300,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RidesScreen; 
+export default UserRidesScreen; 

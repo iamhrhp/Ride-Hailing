@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RiderSignUpScreenProps {
   navigation: any;
@@ -24,6 +25,9 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  
+  // Development mode flag
+  const isDevelopment = __DEV__;
 
   // Form data
   const [formData, setFormData] = useState({
@@ -86,6 +90,59 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
     { id: 'scooter', name: 'Scooter', icon: 'motorcycle', description: '2-wheeler scooter' },
     { id: 'auto', name: 'Auto', icon: 'taxi', description: '3-wheeler auto rickshaw' },
   ];
+
+  // Test user data for development bypass
+  const testUserData = {
+    firstName: 'Test',
+    lastName: 'User',
+    age: '25',
+    gender: 'male',
+    aadharNumber: '123456789012',
+    city: 'Mumbai',
+    pincode: '400001',
+    phoneNumber: '9876543210',
+    vehicleType: 'car',
+    vehicleModel: 'Honda City',
+    vehicleNumber: 'MH12AB1234',
+    vehicleYear: '2020',
+    licenseNumber: 'DL1234567890',
+    licenseExpiry: '2025-12-31',
+    insuranceNumber: 'INS12345678',
+    insuranceExpiry: '2025-12-31',
+  };
+
+  // Development bypass: Auto-fill test data on mount
+  useEffect(() => {
+    if (isDevelopment) {
+      setFormData(testUserData);
+      console.log('🚀 Development Mode: Test user data auto-filled');
+    }
+  }, []);
+
+  // Development bypass: Skip all steps and complete signup instantly
+  const handleDevBypass = () => {
+    if (!isDevelopment) return;
+    
+    Alert.alert(
+      'Development Bypass',
+      'Skip all steps and complete signup with test data?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Skip & Complete',
+          onPress: () => {
+            setFormData(testUserData);
+            setLoading(true);
+            // Simulate instant completion
+            setTimeout(() => {
+              setLoading(false);
+              navigation.navigate('RiderSignUpSuccess');
+            }, 500);
+          },
+        },
+      ]
+    );
+  };
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -266,6 +323,14 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
   };
 
   const handleNext = () => {
+    // Development bypass: Skip validation in dev mode
+    if (isDevelopment) {
+      if (currentStep < 5) {
+        setCurrentStep(currentStep + 1);
+      }
+      return;
+    }
+    
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
     } else if (currentStep === 2 && validateStep2()) {
@@ -284,6 +349,19 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
   };
 
   const handleSendOTP = () => {
+    // Development bypass: Auto-verify in dev mode
+    if (isDevelopment) {
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        setOtpSent(true);
+        setShowOTPModal(true);
+        setOtp('123456'); // Pre-fill OTP in dev mode
+        Alert.alert('Success', 'OTP sent to your phone number (Dev Mode: Use any OTP)');
+      }, 500);
+      return;
+    }
+    
     if (!formData.phoneNumber.trim()) {
       Alert.alert('Error', 'Please enter your phone number');
       return;
@@ -304,6 +382,18 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
   };
 
   const handleVerifyOTP = () => {
+    // Development bypass: Accept any OTP in dev mode
+    if (isDevelopment && otp.length > 0) {
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        setShowOTPModal(false);
+        Alert.alert('Success', 'Phone number verified successfully! (Dev Mode)');
+        navigation.navigate('RiderSignUpSuccess');
+      }, 500);
+      return;
+    }
+    
     if (otp.length !== 6) {
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
       return;
@@ -670,7 +760,14 @@ const RiderSignUpScreen: React.FC<RiderSignUpScreenProps> = ({ navigation }) => 
           <Icon name="arrow-left" size={20} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Become a Rider</Text>
-        <View style={styles.placeholder} />
+        {isDevelopment ? (
+          <TouchableOpacity style={styles.devBypassButton} onPress={handleDevBypass}>
+            <Icon name="rocket" size={16} color="#FF6B35" />
+            <Text style={styles.devBypassText}>DEV</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.placeholder} />
+        )}
       </View>
 
       {/* Progress Steps */}
@@ -818,6 +915,22 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  devBypassButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFF5F0',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  devBypassText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginLeft: 4,
   },
   progressContainer: {
     flexDirection: 'row',

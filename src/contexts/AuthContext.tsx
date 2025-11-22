@@ -5,15 +5,18 @@ import '../config/firebaseInit';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { configureGoogleSignIn } from '../config/googleSignIn';
+import { setUserRole, getUserRole, clearUserRole, UserRole } from '../utils/userRole';
 
 interface AuthContextType {
   user: FirebaseAuthTypes.User | null;
   loading: boolean;
+  userRole: UserRole;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  testSignIn: () => void;
+  testSignIn: (role?: 'passenger' | 'rider') => void;
   signInWithGoogle: () => Promise<void>;
+  setUserRole: (role: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +36,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRoleState] = useState<UserRole>(null);
 
   useEffect(() => {
     console.log('AuthProvider: Initializing Firebase Auth...');
@@ -41,10 +45,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Configure Google Sign-In
     configureGoogleSignIn();
     
+    const loadUserRole = async () => {
+      const role = await getUserRole();
+      setUserRoleState(role);
+    };
+    
     try {
-      const unsubscribe = auth().onAuthStateChanged((user: FirebaseAuthTypes.User | null) => {
+      const unsubscribe = auth().onAuthStateChanged(async (user: FirebaseAuthTypes.User | null) => {
         console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
         setUser(user);
+        if (user) {
+          await loadUserRole();
+        } else {
+          setUserRoleState(null);
+        }
         setLoading(false);
       });
 
@@ -58,6 +72,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     try {
       await auth().signInWithEmailAndPassword(email, password);
+      // When user logs in through "Get a Ride", they are a passenger
+      await setUserRole('passenger');
+      setUserRoleState('passenger');
     } catch (error) {
       throw error;
     }
@@ -66,6 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUp = async (email: string, password: string) => {
     try {
       await auth().createUserWithEmailAndPassword(email, password);
+      // When user signs up through "Get a Ride", they are a passenger
+      await setUserRole('passenger');
+      setUserRoleState('passenger');
     } catch (error) {
       throw error;
     }
@@ -73,6 +93,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
+      // Clear user role
+      await clearUserRole();
+      setUserRoleState(null);
+      
       // If it's a test user, just clear the state
       if (user?.uid === 'test-user-id') {
         setUser(null);
@@ -99,13 +123,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Sign-in the user with the credential
       await auth().signInWithCredential(googleCredential);
+      // When user logs in through Google, default to passenger
+      await setUserRole('passenger');
+      setUserRoleState('passenger');
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       throw error;
     }
   };
 
-  const testSignIn = () => {
+  const testSignIn = async (role: 'passenger' | 'rider' = 'passenger') => {
     // Create a minimal mock user object for testing
     const testUser = {
       uid: 'test-user-id',
@@ -159,17 +186,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } as unknown as FirebaseAuthTypes.User;
 
     setUser(testUser);
+    await setUserRole(role);
+    setUserRoleState(role);
     setLoading(false);
+  };
+
+  const handleSetUserRole = async (role: UserRole) => {
+    await setUserRole(role);
+    setUserRoleState(role);
   };
 
   const value = {
     user,
     loading,
+    userRole,
     signIn,
     signUp,
     signOut,
     testSignIn,
     signInWithGoogle,
+    setUserRole: handleSetUserRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

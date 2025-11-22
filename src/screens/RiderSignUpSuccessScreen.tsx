@@ -6,20 +6,85 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RiderSignUpSuccessScreenProps {
   navigation: any;
 }
 
 const RiderSignUpSuccessScreen: React.FC<RiderSignUpSuccessScreenProps> = ({ navigation }) => {
+  const { user, testSignIn, setUserRole } = useAuth();
+  
+  // Development mode flag
+  const isDevelopment = __DEV__;
+
   const handleGoToHome = () => {
-    navigation.navigate('Home');
+    // Navigate to RoleSelection screen (choose rider or user to book ride)
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'RoleSelection' }],
+    });
   };
 
   const handleViewProfile = () => {
-    // Navigate to rider profile or dashboard
-    navigation.navigate('RiderDashboard');
+    if (user) {
+      // User is logged in - navigate to Main/Profile
+      let rootNavigator = navigation;
+      let parent = navigation.getParent();
+      
+      // Traverse up to find the root navigator
+      while (parent) {
+        rootNavigator = parent;
+        parent = parent.getParent();
+      }
+      
+      rootNavigator.navigate('Main', {
+        screen: 'Profile',
+      });
+    } else {
+      // User is not logged in - navigate to login
+      navigation.navigate('Login');
+    }
+  };
+
+  // Development bypass: Navigate to rider dashboard (as if verified)
+  const handleDevGoToDashboard = async () => {
+    if (!isDevelopment) return;
+    
+    // If user is not logged in, auto-login with test account as rider for development
+    if (!user) {
+      await testSignIn('rider');
+      console.log('🚀 Development Mode: Auto-logged in test user as RIDER for dashboard access');
+    } else {
+      // If user is already logged in, set their role to rider
+      await setUserRole('rider');
+      console.log('🚀 Development Mode: Set user role to RIDER');
+    }
+    
+    // Small delay to ensure auth state updates
+    setTimeout(() => {
+      // Navigate to RiderMain/Home (rider dashboard) via root navigator
+      let rootNavigator = navigation;
+      let parent = navigation.getParent();
+      
+      // Traverse up to find the root navigator (AppNavigator)
+      while (parent) {
+        rootNavigator = parent;
+        parent = parent.getParent();
+      }
+      
+      // Navigate to RiderMain/Home (rider dashboard)
+      try {
+        rootNavigator.navigate('RiderMain', {
+          screen: 'RiderHome',
+        });
+      } catch (error) {
+        console.log('Navigation error, AppNavigator will handle routing after auth state change');
+        // If navigation fails, AppNavigator will automatically show RiderMain/Home after auth state updates
+      }
+    }, 100);
   };
 
   return (
@@ -87,6 +152,14 @@ const RiderSignUpSuccessScreen: React.FC<RiderSignUpSuccessScreenProps> = ({ nav
           <Icon name="user" size={20} color="#FF6B35" />
           <Text style={styles.secondaryButtonText}>View Profile</Text>
         </TouchableOpacity>
+
+        {/* Development Test Button - Only visible in dev mode */}
+        {isDevelopment && (
+          <TouchableOpacity style={styles.devButton} onPress={handleDevGoToDashboard}>
+            <Icon name="check-circle" size={18} color="#4CAF50" />
+            <Text style={styles.devButtonText}>🚀 DEV: Go to Dashboard (Verified)</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -208,6 +281,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FF6B35',
+    marginLeft: 8,
+  },
+  devButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    marginTop: 8,
+  },
+  devButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2E7D32',
     marginLeft: 8,
   },
 });

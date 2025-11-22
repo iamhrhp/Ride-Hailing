@@ -38,8 +38,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     if (email === 'test' && password === 'test') {
       setLoading(true);
       try {
-        // Use the testSignIn function to set user state and navigate
-        testSignIn();
+        // Use the testSignIn function to set user state as passenger and navigate
+        await testSignIn('passenger');
         Alert.alert('Success', 'Test login successful! Navigating to dashboard...');
       } catch (error: any) {
         Alert.alert('Login Failed', error.message);

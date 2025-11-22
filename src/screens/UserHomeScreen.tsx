@@ -16,7 +16,7 @@ import placesService from '../services/placesService';
 import { Location } from '../types';
 import { RESULTS } from 'react-native-permissions';
 
-const HomeScreen: React.FC = () => {
+const UserHomeScreen: React.FC = () => {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -1316,4 +1316,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default UserHomeScreen;

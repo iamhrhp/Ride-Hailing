@@ -11,17 +11,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProfileScreen: React.FC = () => {
+const RiderProfileScreen: React.FC = () => {
   const { user, signOut } = useAuth();
 
   const menuItems = [
-    { icon: 'user', title: 'Personal Information', subtitle: 'Edit your profile' },
-    { icon: 'credit-card', title: 'Payment Methods', subtitle: 'Manage your cards' },
-    { icon: 'map-marker', title: 'Saved Places', subtitle: 'Your frequent locations' },
+    { icon: 'car', title: 'Vehicle Details', subtitle: 'Manage your vehicle info' },
+    { icon: 'wallet', title: 'Earnings', subtitle: 'View earnings & payouts' },
+    { icon: 'credit-card', title: 'Payment Methods', subtitle: 'Bank account & cards' },
+    { icon: 'shield', title: 'Documents', subtitle: 'License, insurance & more' },
     { icon: 'bell', title: 'Notifications', subtitle: 'Manage notifications' },
-    { icon: 'shield', title: 'Privacy & Security', subtitle: 'Account security settings' },
     { icon: 'question-circle', title: 'Help & Support', subtitle: 'Get help and contact us' },
-    { icon: 'info-circle', title: 'About', subtitle: 'App version and legal info' },
+    { icon: 'cog', title: 'Settings', subtitle: 'App settings and preferences' },
   ];
 
   const handleLogout = () => {
@@ -65,10 +65,6 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Futuristic Background */}
-      <View style={styles.backgroundGradient} />
-      <View style={styles.backgroundPattern} />
-      
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -77,11 +73,10 @@ const ProfileScreen: React.FC = () => {
               <View style={styles.avatar}>
                 <Icon name="user" size={40} color="white" />
               </View>
-              <View style={styles.avatarGlow} />
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.displayName || 'User'}</Text>
-              <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+              <Text style={styles.userName}>{user?.displayName || 'Rider'}</Text>
+              <Text style={styles.userEmail}>{user?.email || 'rider@example.com'}</Text>
               <View style={styles.ratingContainer}>
                 <Icon name="star" size={16} color="#FFD700" />
                 <Text style={styles.rating}>4.8</Text>
@@ -91,28 +86,50 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Vehicle Info Card */}
+        <View style={styles.vehicleCard}>
+          <View style={styles.vehicleHeader}>
+            <Icon name="car" size={24} color="#FF6B35" />
+            <Text style={styles.vehicleTitle}>Vehicle Information</Text>
+          </View>
+          <View style={styles.vehicleDetails}>
+            <View style={styles.vehicleDetailRow}>
+              <Text style={styles.vehicleLabel}>Vehicle Type:</Text>
+              <Text style={styles.vehicleValue}>Car</Text>
+            </View>
+            <View style={styles.vehicleDetailRow}>
+              <Text style={styles.vehicleLabel}>Model:</Text>
+              <Text style={styles.vehicleValue}>Honda City</Text>
+            </View>
+            <View style={styles.vehicleDetailRow}>
+              <Text style={styles.vehicleLabel}>Number:</Text>
+              <Text style={styles.vehicleValue}>MH12AB1234</Text>
+            </View>
+          </View>
+        </View>
+
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <View style={styles.statIconContainer}>
-              <Icon name="car" size={20} color="#FF6B35" />
+              <Icon name="trophy" size={20} color="#FF6B35" />
             </View>
-            <Text style={styles.statNumber}>24</Text>
-            <Text style={styles.statLabel}>Total Rides</Text>
+            <Text style={styles.statNumber}>4.8</Text>
+            <Text style={styles.statLabel}>Rating</Text>
           </View>
           <View style={styles.statItem}>
             <View style={styles.statIconContainer}>
-              <Icon name="road" size={20} color="#FF6B35" />
+              <Icon name="car" size={20} color="#FF6B35" />
             </View>
-            <Text style={styles.statNumber}>156</Text>
-            <Text style={styles.statLabel}>Miles Traveled</Text>
+            <Text style={styles.statNumber}>127</Text>
+            <Text style={styles.statLabel}>Total Rides</Text>
           </View>
           <View style={styles.statItem}>
             <View style={styles.statIconContainer}>
               <Icon name="money" size={20} color="#FF6B35" />
             </View>
-            <Text style={styles.statNumber}>₹2,450</Text>
-            <Text style={styles.statLabel}>Total Spent</Text>
+            <Text style={styles.statNumber}>₹18.5K</Text>
+            <Text style={styles.statLabel}>This Month</Text>
           </View>
         </View>
 
@@ -128,7 +145,6 @@ const ProfileScreen: React.FC = () => {
               <Icon name="sign-out" size={20} color="#FF6B35" />
             </View>
             <Text style={styles.logoutText}>Log Out</Text>
-            <View style={styles.logoutButtonGlow} />
           </View>
         </TouchableOpacity>
       </ScrollView>
@@ -139,25 +155,7 @@ const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  // Light Background
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-  },
-  backgroundPattern: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    opacity: 0.1,
+    backgroundColor: '#F5F5F5',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -170,7 +168,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarContainer: {
-    position: 'relative',
     marginRight: 20,
   },
   avatar: {
@@ -183,27 +180,18 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#E0E0E0',
   },
-  avatarGlow: {
-    position: 'absolute',
-    top: -5,
-    left: -5,
-    right: -5,
-    bottom: -5,
-    borderRadius: 45,
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
-  },
   userInfo: {
     flex: 1,
   },
   userName: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#333333',
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 4,
   },
   userEmail: {
-    fontSize: 16,
-    color: '#666666',
+    fontSize: 14,
+    color: '#666',
     marginBottom: 12,
   },
   ratingContainer: {
@@ -219,25 +207,62 @@ const styles = StyleSheet.create({
   ratingLabel: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#666666',
+    color: '#666',
     fontWeight: '500',
+  },
+  vehicleCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  vehicleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  vehicleTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  vehicleDetails: {
+    gap: 12,
+  },
+  vehicleDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  vehicleLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  vehicleValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
   statsContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    margin: 20,
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#FF6B35',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   statItem: {
     flex: 1,
@@ -247,50 +272,45 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: '#FFF5F0',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#FF6B35',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: '#666',
     textAlign: 'center',
-    fontWeight: '500',
   },
   menuContainer: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#FF6B35',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#E0E0E0',
   },
   menuIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: '#FFF5F0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -301,12 +321,12 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: '#333',
     marginBottom: 2,
   },
   menuSubtitle: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 12,
+    color: '#666',
   },
   menuArrow: {
     marginLeft: 8,
@@ -314,27 +334,20 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: '#FFFFFF',
     margin: 20,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: '#FF6B35',
-    shadowColor: '#FF6B35',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-    position: 'relative',
-    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    position: 'relative',
-    zIndex: 2,
   },
   logoutIconContainer: {
     marginRight: 12,
@@ -343,17 +356,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FF6B35',
-    letterSpacing: 0.5,
-  },
-  logoutButtonGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    borderRadius: 20,
   },
 });
 
-export default ProfileScreen; 
+export default RiderProfileScreen;
+
