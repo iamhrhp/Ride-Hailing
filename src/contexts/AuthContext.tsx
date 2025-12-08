@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-// Import Firebase initialization first
 import '../config/firebaseInit';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -41,8 +39,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('AuthProvider: Initializing Firebase Auth...');
     console.log('Auth object:', auth);
-    
-    // Configure Google Sign-In
     configureGoogleSignIn();
     
     const loadUserRole = async () => {
@@ -72,7 +68,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     try {
       await auth().signInWithEmailAndPassword(email, password);
-      // When user logs in through "Get a Ride", they are a passenger
       await setUserRole('passenger');
       setUserRoleState('passenger');
     } catch (error) {
@@ -83,7 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUp = async (email: string, password: string) => {
     try {
       await auth().createUserWithEmailAndPassword(email, password);
-      // When user signs up through "Get a Ride", they are a passenger
       await setUserRole('passenger');
       setUserRoleState('passenger');
     } catch (error) {
@@ -93,17 +87,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Clear user role
       await clearUserRole();
       setUserRoleState(null);
       
-      // If it's a test user, just clear the state
       if (user?.uid === 'test-user-id') {
         setUser(null);
         setLoading(false);
         return;
       }
-      // Otherwise, use Firebase signOut
       await auth().signOut();
     } catch (error) {
       throw error;
@@ -112,28 +103,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithGoogle = async () => {
     try {
-      // Check if your device supports Google Play
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      
-      // Get the users ID token
-      const { idToken } = await GoogleSignin.signIn();
-      
-      // Create a Google credential with the token
+      await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.getTokens();
+      if (!idToken) {
+        throw new Error('No ID token received from Google Sign-In');
+      }
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      
-      // Sign-in the user with the credential
       await auth().signInWithCredential(googleCredential);
-      // When user logs in through Google, default to passenger
       await setUserRole('passenger');
       setUserRoleState('passenger');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google Sign-In Error:', error);
+      
+      if (error?.message?.includes('DEVELOPER_ERROR')) {
+        const helpfulError = new Error(
+          'Google Sign-In Configuration Error (DEVELOPER_ERROR):\n\n' +
+          'This usually means your Web Client ID is not configured correctly.\n\n' +
+          'To fix:\n' +
+          '1. Go to Firebase Console > Authentication > Sign-in method > Google\n' +
+          '2. Copy the "Web client ID"\n' +
+          '3. Open src/config/googleSignIn.ts\n' +
+          '4. Replace YOUR_WEB_CLIENT_ID_HERE with your actual Web Client ID\n' +
+          '5. Restart the app\n\n' +
+          'For more help, see: https://react-native-google-signin.github.io/docs/troubleshooting'
+        );
+        throw helpfulError;
+      }
+      
       throw error;
     }
   };
 
   const testSignIn = async (role: 'passenger' | 'rider' = 'passenger') => {
-    // Create a minimal mock user object for testing
     const testUser = {
       uid: 'test-user-id',
       email: 'test@example.com',

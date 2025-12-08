@@ -55,6 +55,24 @@ react {
     autolinkLibrariesWithApp()
 }
 
+// Fix generated autolinking file to use correct package name
+tasks.whenTaskAdded { task ->
+    if (task.name == 'compileDebugJavaWithJavac' || task.name == 'compileReleaseJavaWithJavac') {
+        task.dependsOn 'fixAutolinkingPackageName'
+    }
+}
+
+task fixAutolinkingPackageName {
+    doLast {
+        def autolinkingFile = file('build/generated/autolinking/src/main/java/com/facebook/react/ReactNativeApplicationEntryPoint.java')
+        if (autolinkingFile.exists()) {
+            def content = autolinkingFile.text
+            content = content.replaceAll('com\\.gaadisathi\\.gaadisathi', 'com.gaadisathi')
+            autolinkingFile.write(content)
+        }
+    }
+}
+
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
@@ -78,9 +96,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.gaadisathi.gaadisathi"
+    namespace "com.gaadisathi"
     defaultConfig {
-        applicationId "com.gaadisathi.gaadisathi"
+        applicationId "com.gaadisathi"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -93,15 +111,19 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile file('release.keystore')
+            storePassword 'gaadisathi123'
+            keyAlias 'release-key'
+            keyPassword 'gaadisathi123'
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

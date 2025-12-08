@@ -271,7 +271,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.gaadisathi.gaadisathi";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.gaadisathi";
 				PRODUCT_NAME = RideHailingApp;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -298,7 +298,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.gaadisathi.gaadisathi";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.gaadisathi";
 				PRODUCT_NAME = RideHailingApp;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

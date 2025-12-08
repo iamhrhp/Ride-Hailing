@@ -9,25 +9,61 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import RideService from '../services/rideService';
+import { Ride, Driver, Location } from '../types';
 
-const RideStatusScreen: React.FC = () => {
+interface RideStatusScreenProps {
+  route?: {
+    params?: {
+      rideId?: string;
+    };
+  };
+}
+
+const RideStatusScreen: React.FC<RideStatusScreenProps> = ({ route }) => {
+  const rideId = route?.params?.rideId;
+  const [ride, setRide] = useState<Ride | null>(null);
+  const [driverInfo, setDriverInfo] = useState<Driver | null>(null);
+  const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [rideStatus, setRideStatus] = useState<'searching' | 'found' | 'arriving' | 'arrived' | 'in-progress'>('searching');
-  const [driverInfo, _setDriverInfo] = useState({
-    name: 'John Smith',
-    rating: 4.8,
-    vehicle: 'Toyota Camry',
-    plateNumber: 'ABC-123',
-    eta: 3,
-  });
 
   useEffect(() => {
-    // Simulate ride status progression
-    const timer = setTimeout(() => {
-      setRideStatus('found');
-    }, 3000);
+    if (!rideId) {
+      Alert.alert('Error', 'No ride ID provided');
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    const unsubscribeRide = RideService.subscribeToRide(rideId, (updatedRide) => {
+      if (updatedRide) {
+        setRide(updatedRide);
+        
+        if (updatedRide.status === 'pending') {
+          setRideStatus('searching');
+        } else if (updatedRide.status === 'accepted') {
+          setRideStatus('found');
+          if (updatedRide.driverId) {
+            RideService.getDriverProfile(updatedRide.driverId).then(setDriverInfo);
+            const unsubscribeDriver = RideService.subscribeToDriverLocation(
+              updatedRide.driverId,
+              (location) => {
+                setDriverLocation(location);
+                if (location) {
+                  setRideStatus('arriving');
+                }
+              }
+            );
+            return () => unsubscribeDriver();
+          }
+        } else if (updatedRide.status === 'in-progress') {
+          setRideStatus('in-progress');
+        } else if (updatedRide.status === 'completed') {
+          setRideStatus('in-progress');
+        }
+      }
+    });
+
+    return () => unsubscribeRide();
+  }, [rideId]);
 
   const getStatusText = () => {
     switch (rideStatus) {
@@ -59,13 +95,24 @@ const RideStatusScreen: React.FC = () => {
     Alert.alert('Message Driver', 'Opening chat...');
   };
 
-  const handleCancelRide = () => {
+  const handleCancelRide = async () => {
+    if (!rideId) return;
+    
     Alert.alert(
       'Cancel Ride',
       'Are you sure you want to cancel this ride?',
       [
         { text: 'No', style: 'cancel' },
-        { text: 'Yes', onPress: () => console.log('Ride cancelled') },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            try {
+              await RideService.updateRideStatus(rideId, 'cancelled');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to cancel ride');
+            }
+          },
+        },
       ]
     );
   };

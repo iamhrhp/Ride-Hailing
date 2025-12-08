@@ -12,6 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import RideService from '../services/rideService';
+import DriverLocationService from '../services/driverLocationService';
+import LocationService from '../services/locationService';
+import { Location, RideRequest } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RideRequest {
   id: string;
@@ -25,76 +30,89 @@ interface RideRequest {
 }
 
 const RiderHomeScreen: React.FC = () => {
+  const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
   const [availableRides, setAvailableRides] = useState<RideRequest[]>([]);
   const [selectedRide, setSelectedRide] = useState<RideRequest | null>(null);
+  const [driverLocation, setDriverLocation] = useState<Location | null>(null);
+  const [driverId, setDriverId] = useState<string | null>(null);
 
-  // Mock data for available rides
   useEffect(() => {
-    if (isOnline) {
-      setAvailableRides([
-        {
-          id: '1',
-          passengerName: 'John Doe',
-          pickup: {
-            latitude: 19.0760,
-            longitude: 72.8777,
-            address: 'Andheri Station, Mumbai',
-          },
-          destination: {
-            latitude: 19.1077,
-            longitude: 72.8317,
-            address: 'Bandra Kurla Complex, Mumbai',
-          },
-          distance: 8.5,
-          fare: 250,
-          rideType: 'car',
-          requestedAt: new Date(),
-        },
-        {
-          id: '2',
-          passengerName: 'Jane Smith',
-          pickup: {
-            latitude: 19.0760,
-            longitude: 72.8777,
-            address: 'Andheri Station, Mumbai',
-          },
-          destination: {
-            latitude: 19.2183,
-            longitude: 72.9781,
-            address: 'Powai, Mumbai',
-          },
-          distance: 12.3,
-          fare: 380,
-          rideType: 'bike',
-          requestedAt: new Date(),
-        },
-      ]);
+    LocationService.getCurrentLocation().then(setDriverLocation);
+  }, []);
+
+  useEffect(() => {
+    if (isOnline && driverLocation && driverId) {
+      const unsubscribe = RideService.subscribeToAvailableRides(
+        driverLocation,
+        10,
+        (rides) => {
+          setAvailableRides(rides);
+        }
+      );
+
+      return () => unsubscribe();
     } else {
       setAvailableRides([]);
     }
-  }, [isOnline]);
+  }, [isOnline, driverLocation, driverId]);
 
-  const handleToggleOnline = (value: boolean) => {
-    setIsOnline(value);
-    if (value) {
-      Alert.alert('You\'re Online', 'You will now receive ride requests');
-    } else {
-      Alert.alert('You\'re Offline', 'You will not receive new ride requests');
+  const handleToggleOnline = async (value: boolean) => {
+    try {
+      if (value) {
+        if (!driverId) {
+          const location = await LocationService.getCurrentLocation();
+          if (!location) {
+            Alert.alert('Error', 'Unable to get your location');
+            return;
+          }
+
+          const name = user?.displayName || user?.email?.split('@')[0] || 'Driver';
+          const newDriverId = await DriverLocationService.initializeDriverProfile(
+            name,
+            'Vehicle',
+            location
+          );
+          setDriverId(newDriverId);
+          await DriverLocationService.setDriverOnline(newDriverId, true);
+        } else {
+          await DriverLocationService.setDriverOnline(driverId, true);
+        }
+        Alert.alert('You\'re Online', 'You will now receive ride requests');
+      } else {
+        if (driverId) {
+          await DriverLocationService.setDriverOnline(driverId, false);
+        }
+        Alert.alert('You\'re Offline', 'You will not receive new ride requests');
+      }
+      setIsOnline(value);
+    } catch (error: any) {
+      console.error('Error toggling online status:', error);
+      Alert.alert('Error', error.message || 'Failed to update online status');
     }
   };
 
-  const handleAcceptRide = (ride: RideRequest) => {
+  const handleAcceptRide = async (ride: RideRequest) => {
+    if (!ride.id || !driverId) {
+      Alert.alert('Error', 'Missing ride or driver information');
+      return;
+    }
+
     Alert.alert(
       'Accept Ride',
-      `Accept ride from ${ride.passengerName} for ₹${ride.fare}?`,
+      `Accept ride for ₹${ride.fare || ride.price || 0}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Accept',
-          onPress: () => {
-            Alert.alert('Ride Accepted', 'Navigate to pickup location');
-            // Navigate to ride details/active ride screen
+          onPress: async () => {
+            try {
+              await RideService.acceptRide(ride.id!, driverId);
+              Alert.alert('Ride Accepted', 'Navigate to pickup location');
+            } catch (error: any) {
+              console.error('Error accepting ride:', error);
+              Alert.alert('Error', error.message || 'Failed to accept ride');
+            }
           },
         },
       ]

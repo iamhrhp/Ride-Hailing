@@ -7,13 +7,15 @@ import {
   FlatList,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import locationService from '../services/locationService';
 import placesService from '../services/placesService';
-import { Location } from '../types';
+import RideService from '../services/rideService';
+import { Location, Driver } from '../types';
 import { RESULTS } from 'react-native-permissions';
 
 const UserHomeScreen: React.FC = () => {
@@ -44,6 +46,8 @@ const UserHomeScreen: React.FC = () => {
   // Route and rider search state
   const [showSearchRiderModal, setShowSearchRiderModal] = useState(false);
   const [isSearchingRider, setIsSearchingRider] = useState(false);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Driver[]>([]);
+  const [currentRideId, setCurrentRideId] = useState<string | null>(null);
 
   const rideTypes = [
     { id: 'bike', name: 'Bike', icon: 'motorcycle', color: '#FF6B35', description: 'Fast & Affordable' },
@@ -448,6 +452,101 @@ const UserHomeScreen: React.FC = () => {
     setSelectedRideType(rideTypeId);
     setShowRideTypeModal(false);
   };
+
+  const handleCreateRideRequest = async () => {
+    if (!selectedLocation || !destination) {
+      Alert.alert('Error', 'Please select both pickup and destination locations');
+      return;
+    }
+
+    if (!selectedRideType) {
+      setShowRideTypeModal(true);
+      return;
+    }
+
+    try {
+      setIsSearchingRider(true);
+      setShowSearchRiderModal(true);
+
+      const distance = RideService.calculateDistance(
+        selectedLocation.latitude,
+        selectedLocation.longitude,
+        destination.latitude,
+        destination.longitude
+      );
+
+      const estimatedDuration = Math.round(distance * 2);
+      const estimatedPrice = Math.round(distance * 15);
+
+      const rideId = await RideService.createRideRequest({
+        pickup: selectedLocation,
+        destination: destination,
+        price: estimatedPrice,
+        distance: distance,
+        duration: estimatedDuration,
+      });
+
+      setCurrentRideId(rideId);
+
+      if (currentLocation) {
+        const unsubscribe = RideService.subscribeToNearbyDrivers(
+          currentLocation,
+          5,
+          (drivers) => {
+            setNearbyDrivers(drivers);
+            if (drivers.length > 0 && !isSearchingRider) {
+              setIsSearchingRider(false);
+            }
+          }
+        );
+
+        setTimeout(() => {
+          unsubscribe();
+          if (nearbyDrivers.length === 0) {
+            Alert.alert(
+              'No Drivers Found',
+              'No nearby drivers available. Please try again later.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setShowSearchRiderModal(false);
+                    setIsSearchingRider(false);
+                  },
+                },
+              ]
+            );
+          }
+        }, 30000);
+      }
+
+      const unsubscribeRide = RideService.subscribeToRide(rideId, (ride) => {
+        if (ride && ride.status === 'accepted' && ride.driverId) {
+          setShowSearchRiderModal(false);
+          setIsSearchingRider(false);
+          unsubscribeRide();
+        }
+      });
+    } catch (error: any) {
+      console.error('Error creating ride request:', error);
+      Alert.alert('Error', error.message || 'Failed to create ride request');
+      setIsSearchingRider(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentLocation && showSearchRiderModal && currentRideId) {
+      const unsubscribe = RideService.subscribeToNearbyDrivers(
+        currentLocation,
+        5,
+        (drivers) => {
+          setNearbyDrivers(drivers);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [currentLocation, showSearchRiderModal, currentRideId]);
 
   const handleMapPress = (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;

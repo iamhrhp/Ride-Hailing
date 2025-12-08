@@ -10,12 +10,14 @@ export interface User {
 
 export interface Driver {
   id: string;
+  userId?: string;
   name: string;
   vehicle: {
     model: string;
   };
   rating: number;
   isAvailable: boolean;
+  isOnline?: boolean;
   currentLocation: Location;
 }
 
@@ -40,9 +42,17 @@ export interface Ride {
 }
 
 export interface RideRequest {
+  id?: string;
+  userId?: string;
+  passengerName?: string;
   pickup: Location;
   destination: Location;
-  rideType: 'economy' | 'comfort' | 'premium';
+  rideType?: 'economy' | 'comfort' | 'premium' | 'car' | 'bike';
+  distance?: number;
+  fare?: number;
+  price?: number;
+  requestedAt?: Date;
+  createdAt?: Date;
 }
 
 export interface NavigationProps {

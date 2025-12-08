@@ -1,34 +1,18 @@
-// Google Sign-In Configuration
-// This file contains the configuration for Google Sign-In
-
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-// Configure Google Sign-In
 export const configureGoogleSignIn = () => {
+  const webClientId = '327137806934-98fhkbb6vpseurgtfojr5q491256u7pp.apps.googleusercontent.com';
+  
   GoogleSignin.configure({
-    // Replace this with your actual Web Client ID from Google Cloud Console
-    // You can find this in: Google Cloud Console > APIs & Services > Credentials
-    // Format: XXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com
-    webClientId: 'YOUR_WEB_CLIENT_ID_HERE', // Get this from Google Cloud Console
-    
-    // Optional: Set offline access to true
+    webClientId: webClientId,
     offlineAccess: true,
-    
-    // Optional: Set hosted domain (for G Suite accounts)
     hostedDomain: '',
-    
-    // Optional: Force code for refresh token
     forceCodeForRefreshToken: true,
-    
-    // Optional: Account name for account selection
     accountName: '',
-    
-    // Optional: iOS specific configuration
-    iosClientId: 'YOUR_IOS_CLIENT_ID_HERE', // Optional, only if you have iOS app
+    iosClientId: 'YOUR_IOS_CLIENT_ID_HERE',
   });
 };
 
-// Helper function to check if Google Play Services are available
 export const checkGooglePlayServices = async () => {
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -39,7 +23,6 @@ export const checkGooglePlayServices = async () => {
   }
 };
 
-// Helper function to get current user
 export const getCurrentGoogleUser = async () => {
   try {
     const userInfo = await GoogleSignin.signInSilently();
@@ -50,7 +33,6 @@ export const getCurrentGoogleUser = async () => {
   }
 };
 
-// Helper function to sign out from Google
 export const signOutFromGoogle = async () => {
   try {
     await GoogleSignin.signOut();

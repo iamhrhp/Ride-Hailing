@@ -1,4 +1,4 @@
-package com.gaadisathi.gaadisathi
+package com.gaadisathi
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
