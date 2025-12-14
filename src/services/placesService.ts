@@ -162,6 +162,92 @@ class PlacesService {
       return null;
     }
   }
+
+  /**
+   * Get route directions using Google Directions API
+   * Returns an array of coordinates following the actual road route
+   */
+  async getDirections(
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number }
+  ): Promise<Array<{ latitude: number; longitude: number }> | null> {
+    try {
+      const originStr = `${origin.latitude},${origin.longitude}`;
+      const destStr = `${destination.latitude},${destination.longitude}`;
+      
+      const url = `${this.baseUrl}/directions/json?origin=${originStr}&destination=${destStr}&key=${this.apiKey}`;
+
+      console.log('Fetching directions from:', originStr, 'to:', destStr);
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.routes && data.routes.length > 0) {
+        // Get the first route
+        const route = data.routes[0];
+        const coordinates: Array<{ latitude: number; longitude: number }> = [];
+
+        // Decode the polyline to get coordinates
+        route.legs.forEach((leg: any) => {
+          leg.steps.forEach((step: any) => {
+            // Decode polyline from step
+            const decoded = this.decodePolyline(step.polyline.points);
+            coordinates.push(...decoded);
+          });
+        });
+
+        console.log('✅ Directions fetched with', coordinates.length, 'points');
+        return coordinates.length > 0 ? coordinates : null;
+      }
+
+      console.warn('Directions API returned status:', data.status);
+      return null;
+    } catch (error) {
+      console.error('Error getting directions:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Decode Google's encoded polyline string to coordinates
+   * Algorithm from: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+   */
+  private decodePolyline(encoded: string): Array<{ latitude: number; longitude: number }> {
+    const coordinates: Array<{ latitude: number; longitude: number }> = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+      let b: number;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = ((result & 1) !== 0) ? ~(result >> 1) : (result >> 1);
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = ((result & 1) !== 0) ? ~(result >> 1) : (result >> 1);
+      lng += dlng;
+
+      coordinates.push({
+        latitude: lat * 1e-5,
+        longitude: lng * 1e-5,
+      });
+    }
+
+    return coordinates;
+  }
 }
 
 const placesService = new PlacesService();

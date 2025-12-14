@@ -1,0 +1,345 @@
+================================================================================
+                    RIDE HAILING APP - SETUP GUIDE
+                    Development Environment Setup Instructions
+================================================================================
+
+This guide will help you set up and run the Ride Hailing App on your development
+machine. Follow these steps carefully to ensure everything works correctly.
+
+================================================================================
+                            SYSTEM REQUIREMENTS
+================================================================================
+
+OPERATING SYSTEM:
+  - Windows 10/11 (for Android development)
+  - macOS (for iOS development - optional, can use Android on Windows)
+  - Linux (for Android development)
+
+NODE.JS:
+  - Version: Node.js 20.x or higher (LTS recommended)
+  - Download from: https://nodejs.org/
+  - Verify installation: node --version (should show v20.x.x or higher)
+  - Also install npm (comes with Node.js): npm --version
+
+REACT NATIVE:
+  - Version: 0.81.4
+  - This is automatically installed with dependencies
+
+================================================================================
+                        ANDROID DEVELOPMENT SETUP
+================================================================================
+
+1. INSTALL JAVA DEVELOPMENT KIT (JDK):
+   - Download JDK 17 or higher from: https://adoptium.net/
+   - Install JDK
+   - Set JAVA_HOME environment variable:
+     * Windows: System Properties > Environment Variables > Add JAVA_HOME
+     * Path: C:\Program Files\Eclipse Adoptium\jdk-17.x.x-hotspot
+   - Verify: java -version
+
+2. INSTALL ANDROID STUDIO:
+   - Download from: https://developer.android.com/studio
+   - Install Android Studio
+   - During installation, make sure to install:
+     * Android SDK
+     * Android SDK Platform
+     * Android Virtual Device (AVD)
+   - Open Android Studio > SDK Manager
+   - Install Android SDK Platform 33 (or latest)
+   - Install Android SDK Build-Tools
+
+3. SET ANDROID ENVIRONMENT VARIABLES:
+   - ANDROID_HOME: C:\Users\YourUsername\AppData\Local\Android\Sdk
+   - Add to PATH:
+     * %ANDROID_HOME%\platform-tools
+     * %ANDROID_HOME%\tools
+     * %ANDROID_HOME%\tools\bin
+   - Verify: adb version
+
+4. CREATE ANDROID VIRTUAL DEVICE (AVD):
+   - Open Android Studio > AVD Manager
+   - Create Virtual Device
+   - Choose a device (e.g., Pixel 5)
+   - Download and select a system image (API 33 or higher)
+   - Finish and start the emulator
+
+================================================================================
+                        IOS DEVELOPMENT SETUP (macOS ONLY)
+================================================================================
+
+1. INSTALL XCODE:
+   - Download from Mac App Store
+   - Install Xcode Command Line Tools:
+     xcode-select --install
+
+2. INSTALL COCOAPODS:
+   - Install Ruby (usually pre-installed on macOS)
+   - Install CocoaPods: sudo gem install cocoapods
+   - Verify: pod --version
+
+3. INSTALL IOS DEPENDENCIES:
+   - Navigate to ios folder: cd ios
+   - Install pods: pod install
+   - Return to root: cd ..
+
+================================================================================
+                        PROJECT SETUP STEPS
+================================================================================
+
+STEP 1: CLONE OR DOWNLOAD THE PROJECT
+  - Make sure you have the complete project folder
+  - Navigate to project directory in terminal/command prompt
+
+STEP 2: INSTALL NODE MODULES
+  Open terminal/command prompt in the project root directory and run:
+
+  npm install
+
+  OR if you prefer yarn:
+
+  yarn install
+
+  This will install all required dependencies (may take 5-10 minutes)
+
+STEP 3: INSTALL WATCHMAN (Optional but Recommended)
+  - Windows: Not available, skip this step
+  - macOS: brew install watchman
+  - Linux: Follow instructions at https://facebook.github.io/watchman/docs/install
+
+STEP 4: FIREBASE SETUP
+  - You need a Firebase project configured
+  - Download google-services.json for Android:
+    * Go to Firebase Console > Project Settings
+    * Download google-services.json
+    * Place it in: android/app/google-services.json
+  - Download GoogleService-Info.plist for iOS (if developing for iOS):
+    * Place it in: ios/RideHailingApp/GoogleService-Info.plist
+
+STEP 5: GOOGLE MAPS API KEY SETUP
+  - Get Google Maps API Key from Google Cloud Console
+  - Enable these APIs:
+    * Maps SDK for Android
+    * Maps SDK for iOS
+    * Places API
+    * Directions API
+    * Geocoding API
+  - Update the API key in: src/config/keys.ts
+    Replace: GOOGLE_MAPS_API_KEY with your actual key
+
+================================================================================
+                        RUNNING THE APPLICATION
+================================================================================
+
+METHOD 1: USING NPM SCRIPTS (Recommended)
+
+1. START METRO BUNDLER:
+   Open terminal in project root and run:
+   
+   npm start
+   
+   OR
+   
+   npm run start
+   
+   Keep this terminal window open!
+
+2. RUN ON ANDROID (In a NEW terminal window):
+   - Make sure Android Emulator is running OR device is connected via USB
+   - Enable USB Debugging on your Android device
+   - Run: npm run android
+   
+   OR
+   
+   yarn android
+
+3. RUN ON IOS (macOS only, In a NEW terminal window):
+   - Make sure iOS Simulator is running
+   - Run: npm run ios
+   
+   OR
+   
+   yarn ios
+
+METHOD 2: USING ANDROID STUDIO / XCODE
+
+ANDROID:
+  - Open Android Studio
+  - File > Open > Select android folder
+  - Wait for Gradle sync to complete
+  - Click Run button or press Shift+F10
+
+IOS (macOS):
+  - Open Xcode
+  - File > Open > Select ios/RideHailingApp.xcworkspace (NOT .xcodeproj)
+  - Select a simulator or device
+  - Click Run button or press Cmd+R
+
+================================================================================
+                        TROUBLESHOOTING COMMON ISSUES
+================================================================================
+
+ISSUE: "Command not found" or "npm: command not found"
+SOLUTION: 
+  - Install Node.js from https://nodejs.org/
+  - Restart terminal/command prompt
+  - Verify: node --version and npm --version
+
+ISSUE: "SDK location not found"
+SOLUTION:
+  - Set ANDROID_HOME environment variable
+  - Windows: Set in System Environment Variables
+  - Verify: echo %ANDROID_HOME% (Windows) or echo $ANDROID_HOME (Mac/Linux)
+
+ISSUE: "Metro bundler port 8081 already in use"
+SOLUTION:
+  - Windows: netstat -ano | findstr :8081 (find PID)
+            taskkill /PID <PID> /F
+  - Mac/Linux: lsof -ti:8081 | xargs kill -9
+  - OR: npm run kill:metro
+
+ISSUE: "Gradle build failed"
+SOLUTION:
+  - Clean build: cd android && ./gradlew clean && cd ..
+  - Delete: android/.gradle folder
+  - Rebuild: npm run android
+
+ISSUE: "Unable to resolve module"
+SOLUTION:
+  - Delete node_modules folder
+  - Delete package-lock.json (or yarn.lock)
+  - Run: npm install (or yarn install)
+  - Clear cache: npm start -- --reset-cache
+
+ISSUE: "Google Maps not showing"
+SOLUTION:
+  - Verify Google Maps API key is set correctly in src/config/keys.ts
+  - Check that API key has required APIs enabled
+  - For Android: Check google-services.json is in android/app/
+  - Restart Metro bundler and rebuild app
+
+ISSUE: "Firebase connection error"
+SOLUTION:
+  - Verify google-services.json is in correct location
+  - Check Firebase project is active
+  - Verify internet connection
+  - Check Firebase rules allow read/write
+
+ISSUE: "Location permission denied"
+SOLUTION:
+  - Android: Settings > Apps > Your App > Permissions > Location > Allow
+  - iOS: Settings > Privacy > Location Services > Your App > Allow
+  - Grant location permission when app requests it
+
+ISSUE: "App crashes on startup"
+SOLUTION:
+  - Check Metro bundler is running
+  - Clear cache: npm start -- --reset-cache
+  - Rebuild: npm run android (or ios)
+  - Check console for error messages
+
+================================================================================
+                        USEFUL COMMANDS
+================================================================================
+
+Start Metro Bundler:
+  npm start
+
+Start Metro with cache reset:
+  npm start -- --reset-cache
+
+Run on Android:
+  npm run android
+
+Run on iOS:
+  npm run ios
+
+Clear all caches:
+  npm run clear:cache
+
+Kill Metro bundler:
+  npm run kill:metro
+
+Check Node version:
+  node --version
+
+Check npm version:
+  npm --version
+
+Check React Native CLI:
+  npx react-native --version
+
+Check Android SDK:
+  adb version
+
+Check Java version:
+  java -version
+
+================================================================================
+                        VERIFICATION CHECKLIST
+================================================================================
+
+Before running the app, verify:
+
+[ ] Node.js 20.x or higher is installed
+[ ] npm is installed and working
+[ ] Android Studio is installed (for Android development)
+[ ] Android SDK is configured
+[ ] ANDROID_HOME environment variable is set
+[ ] Android Emulator is running OR device is connected
+[ ] Firebase google-services.json is in place
+[ ] Google Maps API key is configured
+[ ] All dependencies are installed (npm install completed)
+[ ] Metro bundler can start without errors
+
+================================================================================
+                        ADDITIONAL RESOURCES
+================================================================================
+
+React Native Documentation:
+  https://reactnative.dev/docs/getting-started
+
+React Native Environment Setup:
+  https://reactnative.dev/docs/environment-setup
+
+Android Studio Setup:
+  https://developer.android.com/studio
+
+Firebase Setup:
+  https://firebase.google.com/docs
+
+Google Maps API:
+  https://developers.google.com/maps/documentation
+
+Troubleshooting Guide:
+  https://reactnative.dev/docs/troubleshooting
+
+================================================================================
+                        SUPPORT & HELP
+================================================================================
+
+If you encounter issues not covered in this guide:
+
+1. Check the error message in terminal/console
+2. Search for the error on Stack Overflow
+3. Check React Native GitHub issues
+4. Review the troubleshooting section above
+5. Verify all requirements are met
+
+================================================================================
+                        QUICK START (TL;DR)
+================================================================================
+
+1. Install Node.js 20+ from nodejs.org
+2. Install Android Studio and set up Android SDK
+3. Set ANDROID_HOME environment variable
+4. Clone/download project
+5. Run: npm install
+6. Add google-services.json to android/app/
+7. Update Google Maps API key in src/config/keys.ts
+8. Start Metro: npm start
+9. In new terminal: npm run android
+
+================================================================================
+
+Good luck with your development! 🚀
+

@@ -1,0 +1,64 @@
+================================================================================
+                    QUICK START GUIDE - RIDE HAILING APP
+================================================================================
+
+MINIMUM REQUIREMENTS:
+  ✓ Node.js 20.x or higher
+  ✓ Android Studio (for Android development)
+  ✓ Java JDK 17 or higher
+
+================================================================================
+                        INSTALLATION STEPS
+================================================================================
+
+1. INSTALL NODE.JS
+   Download from: https://nodejs.org/
+   Install version 20.x LTS
+   Verify: node --version
+
+2. INSTALL ANDROID STUDIO
+   Download from: https://developer.android.com/studio
+   Install Android SDK (API 33+)
+   Set ANDROID_HOME environment variable
+
+3. INSTALL PROJECT DEPENDENCIES
+   Open terminal in project folder:
+   > npm install
+
+4. SETUP FIREBASE
+   - Get google-services.json from Firebase Console
+   - Place in: android/app/google-services.json
+
+5. SETUP GOOGLE MAPS
+   - Get API key from Google Cloud Console
+   - Update in: src/config/keys.ts
+
+================================================================================
+                        RUN THE APP
+================================================================================
+
+Terminal 1 - Start Metro:
+  > npm start
+
+Terminal 2 - Run Android:
+  > npm run android
+
+Make sure Android Emulator is running first!
+
+================================================================================
+                        COMMON FIXES
+================================================================================
+
+Port 8081 in use:
+  > npm run kill:metro
+
+Clear cache:
+  > npm start -- --reset-cache
+
+Rebuild:
+  > npm run android
+
+================================================================================
+
+For detailed instructions, see SETUP_GUIDE.txt
+

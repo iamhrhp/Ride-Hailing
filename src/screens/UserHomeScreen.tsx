@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,12 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import locationService from '../services/locationService';
 import placesService from '../services/placesService';
-import RideService from '../services/rideService';
+import rideServiceInstance, { RideService } from '../services/rideService';
 import { Location, Driver } from '../types';
 import { RESULTS } from 'react-native-permissions';
 
 const UserHomeScreen: React.FC = () => {
+  const mapRef = useRef<MapView>(null);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -48,6 +49,9 @@ const UserHomeScreen: React.FC = () => {
   const [isSearchingRider, setIsSearchingRider] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<Driver[]>([]);
   const [currentRideId, setCurrentRideId] = useState<string | null>(null);
+  const [rideDistance, setRideDistance] = useState<number>(0);
+  const [rideDuration, setRideDuration] = useState<number>(0);
+  const [ridePrice, setRidePrice] = useState<number>(0);
 
   const rideTypes = [
     { id: 'bike', name: 'Bike', icon: 'motorcycle', color: '#FF6B35', description: 'Fast & Affordable' },
@@ -157,26 +161,60 @@ const UserHomeScreen: React.FC = () => {
         return;
       }
       
-      // For now, create a simple straight line route
-      // In production, use Google Directions API
-      const intermediatePoints = 50; // More points for smoother line
+      // Try to get actual road route from Google Directions API
+      try {
+        const roadRoute = await placesService.getDirections(
+          { latitude: origin.latitude, longitude: origin.longitude },
+          { latitude: dest.latitude, longitude: dest.longitude }
+        );
+
+        if (roadRoute && roadRoute.length > 0) {
+          console.log('✅ Road route fetched with', roadRoute.length, 'points');
+          setRouteCoordinates(roadRoute);
+          
+          // Update region to fit the route
+          const lats = roadRoute.map(coord => coord.latitude);
+          const lngs = roadRoute.map(coord => coord.longitude);
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const minLng = Math.min(...lngs);
+          const maxLng = Math.max(...lngs);
+          
+          const newRegion = {
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2,
+            latitudeDelta: Math.max((maxLat - minLat) * 1.5, 0.05),
+            longitudeDelta: Math.max((maxLng - minLng) * 1.5, 0.05),
+          };
+          setRegion(newRegion);
+          
+          // Animate map to fit the route
+          if (mapRef.current) {
+            mapRef.current.animateToRegion(newRegion, 1000);
+          }
+          return;
+        }
+      } catch (directionsError) {
+        console.warn('⚠️ Failed to fetch road route, falling back to straight line:', directionsError);
+      }
+      
+      // Fallback: Create a simple straight line route if Directions API fails
+      console.log('📏 Using straight line route as fallback');
+      const intermediatePoints = 50;
       const latStep = (dest.latitude - origin.latitude) / intermediatePoints;
       const lngStep = (dest.longitude - origin.longitude) / intermediatePoints;
       
       const routeCoords = [];
       
-      // Always include origin point
       routeCoords.push({
         latitude: origin.latitude,
         longitude: origin.longitude,
       });
       
-      // Add intermediate points
       for (let i = 1; i < intermediatePoints; i++) {
         const lat = origin.latitude + latStep * i;
         const lng = origin.longitude + lngStep * i;
         
-        // Validate each coordinate
         if (!isNaN(lat) && !isNaN(lng)) {
           routeCoords.push({
             latitude: lat,
@@ -185,29 +223,19 @@ const UserHomeScreen: React.FC = () => {
         }
       }
       
-      // Always include destination point
       routeCoords.push({
         latitude: dest.latitude,
         longitude: dest.longitude,
       });
       
-      console.log('✅ Route calculated with', routeCoords.length, 'points');
-      console.log('First point:', routeCoords[0]);
-      console.log('Last point:', routeCoords[routeCoords.length - 1]);
-      
-      if (routeCoords.length >= 2) {
-        setRouteCoordinates(routeCoords);
-        console.log('✅ Route coordinates set successfully');
-      } else {
-        console.error('❌ Not enough route coordinates generated');
-        setRouteCoordinates([]);
-      }
+      console.log('✅ Fallback route calculated with', routeCoords.length, 'points');
+      setRouteCoordinates(routeCoords);
       
       // Update region to fit both markers
       const midLat = (origin.latitude + dest.latitude) / 2;
       const midLng = (origin.longitude + dest.longitude) / 2;
       
-      setRegion({
+      const newRegion = {
         latitude: midLat,
         longitude: midLng,
         latitudeDelta: Math.max(
@@ -218,7 +246,12 @@ const UserHomeScreen: React.FC = () => {
           Math.abs(origin.longitude - dest.longitude) * 1.5,
           0.05
         ),
-      });
+      };
+      setRegion(newRegion);
+      // Animate map to fit the route
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 1000);
+      }
     } catch (error) {
       console.error('Error calculating route:', error);
     }
@@ -262,12 +295,17 @@ const UserHomeScreen: React.FC = () => {
       }
       
       // Update map region to center on current location
-      setRegion({
+      const newRegion = {
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      });
+      };
+      setRegion(newRegion);
+      // Animate map to current location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 1000);
+      }
     }
   };
 
@@ -288,12 +326,17 @@ const UserHomeScreen: React.FC = () => {
       }
       
       // Update map region to center on current location
-      setRegion({
+      const newRegion = {
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      });
+      };
+      setRegion(newRegion);
+      // Animate map to current location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 1000);
+      }
     }
   };
 
@@ -380,13 +423,13 @@ const UserHomeScreen: React.FC = () => {
       setSelectedLocation(location);
       setPickupText(result.name || result.address);
       
-      // If destination is already set, recalculate route
+      // If destination is already set, recalculate route and fit both locations
       if (destination) {
         // Route will be recalculated by useEffect
-        // Update region to fit both locations
+        // Animate map to fit both locations
         const midLat = (location.latitude + destination.latitude) / 2;
         const midLng = (location.longitude + destination.longitude) / 2;
-        setRegion({
+        const newRegion = {
           latitude: midLat,
           longitude: midLng,
           latitudeDelta: Math.max(
@@ -397,9 +440,14 @@ const UserHomeScreen: React.FC = () => {
             Math.abs(location.longitude - destination.longitude) * 1.5,
             0.05
           ),
-        });
+        };
+        setRegion(newRegion);
+        // Animate map to the new region
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
       } else {
-        // Update map region to center on the selected location
+        // Animate map to center on the selected location
         const newRegion = {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -407,6 +455,10 @@ const UserHomeScreen: React.FC = () => {
           longitudeDelta: 0.01,
         };
         setRegion(newRegion);
+        // Animate map to the new region
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
       }
     } else {
       setDestination(location);
@@ -415,10 +467,10 @@ const UserHomeScreen: React.FC = () => {
       // If pickup location is already set, update region to fit both locations
       if (selectedLocation) {
         // Route will be recalculated by useEffect
-        // Update region to fit both locations
+        // Animate map to fit both locations
         const midLat = (selectedLocation.latitude + location.latitude) / 2;
         const midLng = (selectedLocation.longitude + location.longitude) / 2;
-        setRegion({
+        const newRegion = {
           latitude: midLat,
           longitude: midLng,
           latitudeDelta: Math.max(
@@ -429,9 +481,14 @@ const UserHomeScreen: React.FC = () => {
             Math.abs(selectedLocation.longitude - location.longitude) * 1.5,
             0.05
           ),
-        });
+        };
+        setRegion(newRegion);
+        // Animate map to the new region
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
       } else {
-        // Update map region to center on the selected location
+        // Animate map to center on the selected location
         const newRegion = {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -439,10 +496,14 @@ const UserHomeScreen: React.FC = () => {
           longitudeDelta: 0.01,
         };
         setRegion(newRegion);
+        // Animate map to the new region
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
       }
     }
     
-    console.log('Updating map region to fit route');
+    console.log('Animating map to selected location');
 
     setSearchResults([]);
     setActiveInput(null);
@@ -451,6 +512,113 @@ const UserHomeScreen: React.FC = () => {
   const handleRideTypeSelect = (rideTypeId: string) => {
     setSelectedRideType(rideTypeId);
     setShowRideTypeModal(false);
+    // Automatically proceed to search after selecting ride type
+    setTimeout(() => {
+      proceedToSearch();
+    }, 300); // Small delay for smooth modal transition
+  };
+
+  // Calculate duration based on ride type and distance
+  const calculateDuration = (distance: number, rideType: string | null): number => {
+    // Average speeds in km/h for different ride types
+    let averageSpeed: number;
+    
+    switch (rideType) {
+      case 'bike':
+        averageSpeed = 35; // ~35 km/h for bikes
+        break;
+      case 'auto':
+        averageSpeed = 30; // ~30 km/h for auto-rickshaws
+        break;
+      case 'cab':
+        averageSpeed = 45; // ~45 km/h for cars/cabs
+        break;
+      case 'parcel':
+        averageSpeed = 40; // ~40 km/h for parcel delivery (bike/car depending on size)
+        break;
+      default:
+        averageSpeed = 35; // Default to bike speed
+    }
+    
+    // Calculate duration in minutes: (distance / speed) * 60
+    const durationInMinutes = Math.round((distance / averageSpeed) * 60);
+    return Math.max(durationInMinutes, 1); // Minimum 1 minute
+  };
+
+  // Calculate price based on ride type and distance
+  const calculatePrice = (distance: number, rideType: string | null): number => {
+    // Base price per km for different ride types
+    let pricePerKm: number;
+    let baseFare: number;
+    
+    switch (rideType) {
+      case 'bike':
+        baseFare = 10; // Base fare
+        pricePerKm = 8; // ₹8 per km
+        break;
+      case 'auto':
+        baseFare = 15; // Base fare
+        pricePerKm = 12; // ₹12 per km
+        break;
+      case 'cab':
+        baseFare = 25; // Base fare
+        pricePerKm = 18; // ₹18 per km
+        break;
+      case 'parcel':
+        baseFare = 20; // Base fare
+        pricePerKm = 10; // ₹10 per km
+        break;
+      default:
+        baseFare = 10;
+        pricePerKm = 8; // Default to bike pricing
+    }
+    
+    // Calculate total price: base fare + (distance * price per km)
+    const totalPrice = Math.round(baseFare + (distance * pricePerKm));
+    return Math.max(totalPrice, baseFare); // Minimum base fare
+  };
+
+  // Handle Continue Ride button press
+  const handleContinueRide = () => {
+    if (!selectedLocation || !destination) {
+      Alert.alert('Error', 'Please select both pickup and destination locations');
+      return;
+    }
+
+    // Always show ride type selection modal first
+    setShowRideTypeModal(true);
+  };
+
+  // Proceed to search after ride type is selected
+  const proceedToSearch = () => {
+    if (!selectedLocation || !destination || !selectedRideType) {
+      return;
+    }
+
+    // Calculate distance
+    const distance = RideService.calculateDistance(
+      selectedLocation.latitude,
+      selectedLocation.longitude,
+      destination.latitude,
+      destination.longitude
+    );
+
+    // Calculate duration based on ride type
+    const duration = calculateDuration(distance, selectedRideType);
+
+    // Calculate price based on ride type and distance
+    const price = calculatePrice(distance, selectedRideType);
+
+    // Set distance, duration, and price
+    setRideDistance(distance);
+    setRideDuration(duration);
+    setRidePrice(price);
+
+    // Show the search rider modal
+    setShowSearchRiderModal(true);
+    
+    // Create ride request (will use the pre-calculated distance, duration, and price)
+    handleCreateRideRequest();
   };
 
   const handleCreateRideRequest = async () => {
@@ -466,19 +634,19 @@ const UserHomeScreen: React.FC = () => {
 
     try {
       setIsSearchingRider(true);
-      setShowSearchRiderModal(true);
 
-      const distance = RideService.calculateDistance(
+      // Use already calculated distance and duration, or calculate if not set
+      const distance = rideDistance > 0 ? rideDistance : RideService.calculateDistance(
         selectedLocation.latitude,
         selectedLocation.longitude,
         destination.latitude,
         destination.longitude
       );
 
-      const estimatedDuration = Math.round(distance * 2);
-      const estimatedPrice = Math.round(distance * 15);
+      const estimatedDuration = rideDuration > 0 ? rideDuration : calculateDuration(distance, selectedRideType);
+      const estimatedPrice = ridePrice > 0 ? ridePrice : calculatePrice(distance, selectedRideType);
 
-      const rideId = await RideService.createRideRequest({
+      const rideId = await rideServiceInstance.createRideRequest({
         pickup: selectedLocation,
         destination: destination,
         price: estimatedPrice,
@@ -489,7 +657,7 @@ const UserHomeScreen: React.FC = () => {
       setCurrentRideId(rideId);
 
       if (currentLocation) {
-        const unsubscribe = RideService.subscribeToNearbyDrivers(
+        const unsubscribe = rideServiceInstance.subscribeToNearbyDrivers(
           currentLocation,
           5,
           (drivers) => {
@@ -520,7 +688,7 @@ const UserHomeScreen: React.FC = () => {
         }, 30000);
       }
 
-      const unsubscribeRide = RideService.subscribeToRide(rideId, (ride) => {
+      const unsubscribeRide = rideServiceInstance.subscribeToRide(rideId, (ride) => {
         if (ride && ride.status === 'accepted' && ride.driverId) {
           setShowSearchRiderModal(false);
           setIsSearchingRider(false);
@@ -534,12 +702,13 @@ const UserHomeScreen: React.FC = () => {
     }
   };
 
+
   useEffect(() => {
     if (currentLocation && showSearchRiderModal && currentRideId) {
-      const unsubscribe = RideService.subscribeToNearbyDrivers(
+      const unsubscribe = rideServiceInstance.subscribeToNearbyDrivers(
         currentLocation,
         5,
-        (drivers) => {
+        (drivers: Driver[]) => {
           setNearbyDrivers(drivers);
         }
       );
@@ -561,8 +730,10 @@ const UserHomeScreen: React.FC = () => {
 
       {/* Map View */}
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
+        initialRegion={region}
         region={region}
         showsUserLocation={true}
         showsMyLocationButton={false}
@@ -572,7 +743,6 @@ const UserHomeScreen: React.FC = () => {
         showsTraffic={false}
         showsIndoors={false}
         mapType="standard"
-        onRegionChangeComplete={setRegion}
         onPress={handleMapPress}
       >
         {/* Current Location Marker */}
@@ -754,7 +924,7 @@ const UserHomeScreen: React.FC = () => {
         {selectedLocation && destination && searchResults.length === 0 && !isSearchingLocation && (
           <TouchableOpacity
             style={styles.continueRideButton}
-            onPress={() => setShowSearchRiderModal(true)}
+            onPress={handleContinueRide}
           >
             <Icon name="arrow-right" size={20} color="#FFFFFF" />
             <Text style={styles.continueRideButtonText}>Continue Ride</Text>
@@ -856,6 +1026,45 @@ const UserHomeScreen: React.FC = () => {
                 </View>
               </View>
             </View>
+
+            {/* Distance, Duration and Price Info */}
+            {(rideDistance > 0 || rideDuration > 0 || ridePrice > 0) && (
+              <View style={styles.rideStatsContainer}>
+                <View style={styles.rideStatItem}>
+                  <View style={styles.rideStatIconContainer}>
+                    <Icon name="road" size={20} color="#FF6B35" />
+                  </View>
+                  <View style={styles.rideStatTextContainer}>
+                    <Text style={styles.rideStatValue}>{rideDistance.toFixed(1)} km</Text>
+                    <Text style={styles.rideStatLabel}>Distance</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.rideStatDivider} />
+                
+                <View style={styles.rideStatItem}>
+                  <View style={styles.rideStatIconContainer}>
+                    <Icon name="clock-o" size={20} color="#FF6B35" />
+                  </View>
+                  <View style={styles.rideStatTextContainer}>
+                    <Text style={styles.rideStatValue}>{rideDuration} min</Text>
+                    <Text style={styles.rideStatLabel}>Duration</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.rideStatDivider} />
+                
+                <View style={styles.rideStatItem}>
+                  <View style={styles.rideStatIconContainer}>
+                    <Icon name="money" size={20} color="#FF6B35" />
+                  </View>
+                  <View style={styles.rideStatTextContainer}>
+                    <Text style={styles.rideStatValue}>₹{ridePrice}</Text>
+                    <Text style={styles.rideStatLabel}>Price</Text>
+                  </View>
+                </View>
+              </View>
+            )}
             
             <View style={styles.searchRiderAnimation}>
               <Icon name="spinner" size={48} color="#FF6B35" />
@@ -1412,6 +1621,49 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FF6B35',
     textAlign: 'center',
+  },
+  rideStatsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F8F8',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  rideStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  rideStatIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  rideStatTextContainer: {
+    flex: 1,
+  },
+  rideStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  rideStatLabel: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  rideStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 16,
   },
 });
 
