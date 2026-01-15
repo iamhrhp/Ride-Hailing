@@ -1,4 +1,21 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+
+<img width="484" height="1061" alt="Screenshot 2026-01-16 011230" src="https://github.com/user-attachments/assets/a9dca37e-ad97-4225-9d46-1adc6ba33a06" />
+
+<img width="500" height="1065" alt="Screenshot 2026-01-16 011353" src="https://github.com/user-attachments/assets/24cec904-2374-4382-96b1-dd6152c4a40a" />
+<img width="496" height="1072" alt="Screenshot 2026-01-16 011333" src="https://github.com/user-attachments/assets/2386230a-9e42-4f3e-9a0d-b84c65b34bc3" />
+<img width="502" height="1059" alt="Screenshot 2026-01-16 011324" src="https://github.com/user-attachments/assets/66ea1973-8e83-4fec-b690-34f0007b7ddc" />
+<img width="530" height="1068" alt="Screenshot 2026-01-16 011416" src="https://github.com/user-attachments/assets/3a639e21-f2ab-4eec-8d85-ba9fe44a97a9" />
+<img width="501" height="1064" alt="Screenshot 2026-01-16 011410" src="https://github.com/user-attachments/assets/6d1c84d8-ae27-4a4d-b88d-a21296eb0cd7" />
+
+<img width="511" height="1062" alt="Screenshot 2026-01-16 011201" src="https://github.com/user-attachments/assets/b161cc3a-d759-4e8b-ae7c-83b4cb44995c" />
+<img width="499" height="1055" alt="Screenshot 2026-01-16 011154" src="https://github.com/user-attachments/assets/76ef6e64-83fe-474b-9eb6-bac7554c0b9e" />
+<img width="510" height="1069" alt="Screenshot 2026-01-16 011140" src="https://github.com/user-attachments/assets/9c2bf487-f987-445f-936d-fb6d0064ae24" />
+<img width="530" height="1073" alt="Screenshot 2026-01-16 011136" src="https://github.com/user-attachments/assets/2a82b1e8-3600-4cd7-be93-4f583dbf39d0" />
+<img width="512" height="1052" alt="Screenshot 2026-01-16 011132" src="https://github.com/user-attachments/assets/24d1aeb3-a53e-4825-ab0b-5c5f97d0b2ef" />
+<img width="537" height="1068" alt="Screenshot 2026-01-16 011123" src="https://github.com/user-attachments/assets/5fa3dffd-92dd-4239-be74-003bf8aa5242" />
+<img width="521" height="1051" alt="Screenshot 2026-01-16 011111" src="https://github.com/user-attachments/assets/72183c67-38d3-4c8b-8551-8e03ac0152de" />
+<img width="494" height="1056" alt="Screenshot 2026-01-16 011047" src="https://github.com/user-attachments/assets/2e9e1ba7-d275-47d2-a2b9-15c3ee0c2f3c" />
+<img width="469" height="1041" alt="Screenshot 2026-01-16 011038" src="https://github.com/user-attachments/assets/39111ff1-3509-4b75-ab23-f28edc1466c5" />
 
 # Getting Started
 
